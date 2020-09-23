@@ -32,4 +32,5 @@ run5:
 	java -cp bin FlowPanel
 run6:
 	java -cp bin WaterClickListener
-
+cleandocs:
+	rm -r docs/*
