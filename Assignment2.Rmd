@@ -1,0 +1,119 @@
+---
+title: "Assignment 2"
+author: "Michael Scott (SCTMIC015)"
+date: "21/09/2020"
+output: pdf_document
+---
+
+## Description of Classes 
+
+We will start by discussing all the classes in the assignment. The changes in the provided classes will be discussed and the entirety of the new classes will be discussed
+
+### Terrain (Provided)
+
+No changes were made to the terrain class
+
+### Water (Added)
+
+This class was used to manage the water on the terrain. The class contained two two dimensional arrays. One representing the height on the terrain points and one representing the value of the "Water Depth" at each point on the grid. Both the terrain values and water values were read from text files and the image of the water values were derived in the same manner as the terrain class.
+Other important methods are:
+
+1. *Add Water* which added water to 9 points on the grid. The center point as well as the water depth were passed as arguments.
+
+2. *WaterTransfer* which made use of the methods: *WaterSurface*, *lowest* and *transfeWater*. given two coordinates this method was responsible for transferring water, as per the assignment guidelines, between all the points between those two co-ordinates.
+
+3. *clearWater* which removes all water from the grid.
+
+4. *ClearBoundary* which clears all the water from the boundaries of the grid.
+
+### FlowPanel (Provided and edited)
+
+This class is responsible for generating the greyscale image of the terrain. We added to the *paintComponent* method so that the class was also responsible for adding the water values to the Panal. The class also contained a *run* method which we used to start 4 new threads with objects from the **WaterEditor**.
+
+### WaterEditor (Added)
+
+This class was responsible for the threads that managed the water on the grid. The run method makes use of the *waterTransfer* method to transfer water between given points on the grid. FlowPanel created 4 threads that were passed with **WaterEditor** objects.
+
+### WaterClickListener (Added)
+
+A helper class used to allow us to click on the "panel" to add water.
+
+### Flow (Provided and edited)
+
+This was our main class. We edited the setupGUI method substantially. We enabled it too accept a **Water** object as a parameter so we could correctly create a **FlowPanel** object. We added functional "Start", "Pause" and "Reset" buttons. A mouseListener which made use of "WaterClickListener" to add water to the panel with a mouse click was added. Lastly a frame to show the timesteps was added. Clicking the "Start" button called the run method in flow panel which then created 4 threads using "WaterEditor" Objects to manage the flow of water on the panal.
+
+In our main method we created Terrain and Water Objects and passed the required data to them using the *readData* methods from each class. We then invoked the GUI.
+
+
+## Java Concurrency Features
+
+### Synchronised Methods
+
+In the Water class multiple methods were declared as synchronized, namely all the methods which edited the "water depth" array as this was edited by all four threads. 
+
+Realistically there is only a small overlap on the boundaries of the four areas where the different threads act. However, if we did not synchronize we could end up with a situation on the boundary where one thread is writing to the "water depth" array whilst another is reading from it. An example of a data race.
+
+## Methods to ensure Code Safety 
+
+We will discuss our methods in four sections
+
+1. Thread Safety 
+2. Thread Synchronization 
+3. Liveness
+4. No deadlock 
+
+### Thread Safety
+
+We need to ensure thread saftey on any object that has a shared mutable state. We want to ensure that no data races or bad interleaving occur when there are multiple threads accessing the same object. When an object is immutable such measures do not need to be put in place. 
+
+Our data that could be accessed by mutliple threads was the "WaterDepth* depth array of our shared **Water** Object. In order to ensure that this object was thread safe we ensured that all the methods reading or writing from the "WaterDepth" array were synchronised. 
+
+Another challenge was to ensure that all four threads were synchronised at each iteration through their portion of "waterDepth" values. This was done using "wait" and "notify". (See Note at end of Assignment)
+
+### Thread Synchronisation 
+
+This was discussed above and in Java Concurrency Features Synchronized methods section. 
+
+
+### Liveness 
+
+We understand liveness to be a concurrent programs ability to execute in a timely manner. In order to ensure liveness we have to ensure that the program is "free from starvation". 
+
+We want to ensure that each thread has regular access to our shared resource (The water object) so that our program executes as expected. We did this by ensuring that our critical sections of our synchronized methods were as short as possible. We also made all the threads execute the same method (They all repeatedly transferred water among a range of values). Each thread would not be blocked for a long period of time before being able to execute the *waterTransfer*. This then increased the liveness of our program. Each thread was also synchronised at each iteration of the transfer water method. This with the fact that each thread performed the same operation ensured that no thread was "greedier" then another. 
+
+### No deadlock 
+
+Deadlock is defined to be "a deadlock occurs when a process or thread enters a waiting state because a requested system resource is held by another waiting process, which in turn is waiting for another resource held by another waiting process." according to Wikipedia. We ensured that this did not happen by continually releasing the locks for the water object during the while loop in the run method of **WaterEditor**. Therefore, no situation occurs in which a thread is left idle for any substantial period of time. 
+
+## Error Checking
+
+This was especially tricky and admittedly no rigorous way was found to check the validity of our program. However, we did observationally note that when placing the water in a similar way to Professor Gains program on the "medin_sample.txt" data set our progam behaved in a similar manner. We also made use of assignment 1 and found that when placing a lot of water into our simulation the water tended to collect in the basins of the terrain as expected. 
+
+
+## Conformity to Model-View-COntroller Pattern
+
+### Model 
+
+The model consists of the classes **Terrain** and **Water**. These were responsible for the storing of data. In our case the **Terrain** class stored the data for the terrain whilst the **Water** class was responsible for storing the information for the water. The **Water** class is also responsible for managing the logic of the water. Ie, it contains the methods that determine how the water flows over the terrain. This is done with the *WaterTransfer* which made use of the methods: *WaterSurface*, *lowest* and *transfeWater*. 
+
+
+### View
+
+The View consists of the *setUpGUI* method in the **Flow** class as well as the **FlowPanel** class. The view is the visual representation of the model to the person making use of the program. Clearly  *setUpGUI* and **FlowPanal**  are responsible for what we see visually and interact with using the buttons and mouse clicks. For example, clicking somewhere on the grid adds water values to the array of "waterDepth" values in our *Water* object. We then visually see the water flowing which is essentially the **WaterTransfer** method editing the array of "WaterDepth" values.
+
+
+### Controller
+
+The controller consists of the threads that are called when we press the start button. These threads make use of the *WaterEditor* class. Our controller recieves input from the GUI in the form of mouse clicks adding water to the array. The start button kicks off our simulation and our threads "control" the rest of the simulation. 
+
+
+We can summarise the above three points as follows:
+
+1.The user adds water via mouse clicks and starts the simulation in the **Flow** GUI.
+
+2. The thread class then runs the simulation and updates the water in the "waterDepth" array. This makes use of the **Water** and **Terrain** class's as well
+
+3. Lastly we derive the image and we see the changes occurring on the screen.
+
+
+
