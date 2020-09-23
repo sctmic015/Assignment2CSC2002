@@ -117,3 +117,9 @@ We can summarise the above three points as follows:
 
 
 
+
+
+
+
+Note: I tried to ensure that each thread synchronised at the end of each traversal through its portion of the array. However, I did not manage to do it. The Water Object is thread safe. One portion might just run slightly faster or slower then another. 
+
